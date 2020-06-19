@@ -31,3 +31,13 @@ jobs:
       - name: Find
         run: |
           find ${PWD}
+      - name: Archive PNG files for Release
+        uses: thedoctor0/zip-release@master
+        with:
+          filename: png.zip
+          directory: png
+      - name: Archive SVG files for Release
+        uses: thedoctor0/zip-release@master
+        with:
+          filename: svg.zip
+          directory: svg

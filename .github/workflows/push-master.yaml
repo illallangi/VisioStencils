@@ -28,9 +28,6 @@ jobs:
             docker run --rm -v ${INPUTDIR}:/input -v ${OUTPUTDIR}:/output docker.io/illallangi/toolbx:v0.6.0 rsvg-convert /input/${INPUT} -o /output/${OUTPUT} -d 600 -p 600
             echo
           done
-      - name: Find
-        run: |
-          find ${PWD}
       - name: Archive PNG files for Release
         uses: thedoctor0/zip-release@master
         with:
@@ -41,3 +38,6 @@ jobs:
         with:
           filename: svg.zip
           directory: svg
+      - name: Find
+        run: |
+          find ${PWD}

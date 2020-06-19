@@ -9,45 +9,76 @@ jobs:
     name: Release Docker Build
     runs-on: ubuntu-latest
     steps:
+
+
       - name: Checkout Repository
         id: checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: '0'
-      - name: Build PNGs
-        id: png
-        run: |
-          echo ${PWD}/svg/
-          find ${PWD}/svg/ -type f -name \*.svg | while read LINE
-          do
-            INPUTDIR=$( dirname ${LINE})
-            OUTPUTDIR=${INPUTDIR/#${PWD}\/svg/${PWD}\/png}
-            INPUT=$( basename ${LINE})
-            OUTPUT=${INPUT/.svg/.png}
-            echo docker run --rm -v ${INPUTDIR}:/input -v ${OUTPUTDIR}:/output docker.io/illallangi/toolbx:v0.6.0 rsvg-convert /input/${INPUT} -o /output/${OUTPUT} -d 600 -p 600
-            docker run --rm -v ${INPUTDIR}:/input -v ${OUTPUTDIR}:/output docker.io/illallangi/toolbx:v0.6.0 rsvg-convert /input/${INPUT} -o /output/${OUTPUT} -d 600 -p 600
-            echo
-          done
-      - name: Archive PNG files for Release
-        uses: thedoctor0/zip-release@master
-        with:
-          filename: png.zip
-          directory: png
-      - name: Archive SVG files for Release
-        uses: thedoctor0/zip-release@master
-        with:
-          filename: svg.zip
-          directory: svg
+
+
       - name: Bump Version
-        if: success()
         id: github-tag
         uses: anothrNick/github-tag-action@1.17.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
+
+
+      - name: Build PNGs
+        id: build-png
+        run: |
+          find ${PWD}/svg/ -type f -name \*.svg | while read INPUT
+          do
+            OUTPUT=${INPUT/.svg/.png}
+            mkdir -p $(dirname ${OUTPUT/\/svg\//\/png\/})
+            docker run --rm \
+              -v ${PWD}:${PWD} \
+              docker.io/illallangi/toolbx:v0.6.0 \
+              rsvg-convert ${INPUT} -o ${OUTPUT/\/svg\//\/png\/} -d 600 -p 600
+          done
+
+      - name: Build VSSX
+        id: build-vssx
+        run: |
+          mkdir -p ${PWD}/vssx
+          find ${PWD}/png/ -type d -mindepth 1 | while read INPUT
+          do
+            docker run --rm \
+              -v ${PWD}:${PWD} \
+              hoveytech/visio-stencil-creator:v1.0 \
+              "--image-path=${INPUT}" \
+              "--image-pattern=*.png" \
+              "--output-filename=${PWD}/vssx/$( basename $INPUT )-${{ steps.github-tag.outputs.tag }}.vssx"
+          done
+
+
+      - name: Archive PNG files for Release
+        id: archive-png
+        uses: thedoctor0/zip-release@master
+        with:
+          filename: png.zip
+          directory: png
+
+      - name: Archive SVG files for Release
+        id: archive-svg
+        uses: thedoctor0/zip-release@master
+        with:
+          filename: svg.zip
+          directory: svg
+
+      - name: Archive VSSX files for Release
+        id: archive-vssx
+        uses: thedoctor0/zip-release@master
+        with:
+          filename: vssx.zip
+          directory: vssx
+
+
       - name: Create Release
         if: success()
-        id: create_release
+        id: create-release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -56,8 +87,10 @@ jobs:
           release_name: ${{ steps.github-tag.outputs.tag }}
           draft: false
           prerelease: false
+
+
       - name: Upload SVG Release Asset
-        id: upload-release-asset-svg
+        id: upload-svg
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -66,8 +99,9 @@ jobs:
           asset_path: ./svg/svg.zip
           asset_name: Illallangi-VisioStencils-SVG-${{ steps.github-tag.outputs.tag }}.zip
           asset_content_type: application/zip
+
       - name: Upload PNG Release Asset
-        id: upload-release-asset-png
+        id: upload-png
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -75,4 +109,15 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./png/png.zip
           asset_name: Illallangi-VisioStencils-PNG-${{ steps.github-tag.outputs.tag }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload VSSX Release Asset
+        id: upload-vssx
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./vssx/vssx.zip
+          asset_name: Illallangi-VisioStencils-VSSX-${{ steps.github-tag.outputs.tag }}.zip
           asset_content_type: application/zip

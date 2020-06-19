@@ -1,0 +1,23 @@
+---
+name: Build
+on:
+  push:
+    branches:
+      - master
+jobs:
+  release-docker-build:
+    name: Release Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        id: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: '0'
+      - name: Build PNGs
+        id: png
+        run: |
+          find ${PWD}
+      - name: Find
+        run: |
+          find ${PWD}

@@ -38,6 +38,41 @@ jobs:
         with:
           filename: svg.zip
           directory: svg
-      - name: Find
-        run: |
-          find ${PWD}
+      - name: Bump Version
+        if: success()
+        id: github-tag
+        uses: anothrNick/github-tag-action@1.17.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+      - name: Create Release
+        if: success()
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.github-tag.outputs.tag }}
+          release_name: ${{ steps.github-tag.outputs.tag }}
+          draft: false
+          prerelease: false
+      - name: Upload SVG Release Asset
+        id: upload-release-asset-svg
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./svg/svg.zip
+          asset_name: Illallangi-VisioStencils-SVG-${{ steps.github-tag.outputs.tag }}.zip
+          asset_content_type: application/zip
+      - name: Upload PNG Release Asset
+        id: upload-release-asset-png
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./png/png.zip
+          asset_name: Illallangi-VisioStencils-PNG-${{ steps.github-tag.outputs.tag }}.zip
+          asset_content_type: application/zip
